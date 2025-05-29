@@ -231,7 +231,7 @@ impl<T> Material<T> {
         self.push_rectangle(wgpu, verts);
     }
 
-    /// Queues a traingle, the points must be provided in clockwise order
+    /// Queues a triangle, the points must be provided in clockwise order
     pub fn add_triangle(
         &mut self,
         p1: Vec2<f32>,
@@ -316,7 +316,7 @@ impl<T> Material<T> {
         let number_of_vertices = self.get_vertex_number() as u16;
         let number_of_triangles = (number_of_sides - 2) as u16;
 
-        let mut indicies = (1..number_of_triangles + 1)
+        let mut indices = (1..number_of_triangles + 1)
             .flat_map(|i| {
                 [
                     number_of_vertices,
@@ -327,18 +327,18 @@ impl<T> Material<T> {
             .collect::<Vec<u16>>();
 
         // ensures we follow copy buffer alignment
-        let num_indicies = indicies.len();
-        let triangles_to_add = if num_indicies < 12 {
-            (12 % num_indicies) / 3
+        let num_indices = indices.len();
+        let triangles_to_add = if num_indices < 12 {
+            (12 % num_indices) / 3
         } else {
-            (num_indicies % 12) / 3
+            (num_indices % 12) / 3
         };
 
         for _ in 0..triangles_to_add {
-            indicies.extend_from_slice(&[
-                indicies[num_indicies - 3],
-                indicies[num_indicies - 2],
-                indicies[num_indicies - 1],
+            indices.extend_from_slice(&[
+                indices[num_indices - 3],
+                indices[num_indices - 2],
+                indices[num_indices - 1],
             ]);
         }
 
@@ -354,12 +354,12 @@ impl<T> Material<T> {
             );
         }
 
-        let max_indicies = buffers.index_buffer.size();
-        if self.index_count + (indicies.len() as u64 * self.index_size) > max_indicies {
+        let max_indices = buffers.index_buffer.size();
+        if self.index_count + (indices.len() as u64 * self.index_size) > max_indices {
             grow_buffer(
                 &mut buffers.index_buffer,
                 wgpu,
-                self.index_count + (indicies.len() as u64 * self.index_size),
+                self.index_count + (indices.len() as u64 * self.index_size),
                 wgpu::BufferUsages::INDEX,
             );
         }
@@ -372,11 +372,11 @@ impl<T> Material<T> {
         wgpu.queue.write_buffer(
             &buffers.index_buffer,
             self.index_count,
-            bytemuck::cast_slice(&indicies),
+            bytemuck::cast_slice(&indices),
         );
 
         self.vertex_count += vertices.len() as u64 * self.vertex_size;
-        self.index_count += indicies.len() as u64 * self.index_size;
+        self.index_count += indices.len() as u64 * self.index_size;
     }
 
     /// This will attempt to resize the texture stored within the shader.
@@ -477,7 +477,7 @@ impl<T> Material<T> {
             );
         }
 
-        let indicies = [
+        let indices = [
             num_verts,
             1 + num_verts,
             2 + num_verts,
@@ -486,8 +486,8 @@ impl<T> Material<T> {
             2 + num_verts,
         ];
 
-        let max_indicies = buffers.index_buffer.size();
-        if self.index_count + (6 * self.index_size) > max_indicies {
+        let max_indices = buffers.index_buffer.size();
+        if self.index_count + (6 * self.index_size) > max_indices {
             grow_buffer(
                 &mut buffers.index_buffer,
                 wgpu,
@@ -504,7 +504,7 @@ impl<T> Material<T> {
         wgpu.queue.write_buffer(
             &buffers.index_buffer,
             self.index_count,
-            bytemuck::cast_slice(&indicies),
+            bytemuck::cast_slice(&indices),
         );
 
         self.vertex_count += 4 * self.vertex_size;
@@ -536,7 +536,7 @@ impl<T> Material<T> {
 
         // yes its wastefull to do this but this is the only way to not have
         // it mess up other drawings while also allowing triangles
-        let indicies = [
+        let indices = [
             num_verts,
             1 + num_verts,
             2 + num_verts,
@@ -545,8 +545,8 @@ impl<T> Material<T> {
             2 + num_verts,
         ];
 
-        let max_indicies = buffers.index_buffer.size();
-        if self.index_count + (6 * self.index_size) > max_indicies {
+        let max_indices = buffers.index_buffer.size();
+        if self.index_count + (6 * self.index_size) > max_indices {
             grow_buffer(
                 &mut buffers.index_buffer,
                 wgpu,
@@ -563,7 +563,7 @@ impl<T> Material<T> {
         wgpu.queue.write_buffer(
             &buffers.index_buffer,
             self.index_count,
-            bytemuck::cast_slice(&indicies),
+            bytemuck::cast_slice(&indices),
         );
 
         self.vertex_count += 3 * self.vertex_size;
