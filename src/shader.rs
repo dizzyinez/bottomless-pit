@@ -32,7 +32,7 @@ pub struct Shader {
 
 impl Shader {
     /// Attempts to create a shader from a file. Requires [ShaderOptions]
-    /// which implents Defualt for quick and easy creation.
+    /// which implents Default for quick and easy creation.
     pub fn new<P: AsRef<Path>, T>(
         path: P,
         options: ShaderOptions<T>,
@@ -106,7 +106,7 @@ impl Shader {
         }
     }
 
-    pub(crate) fn defualt(wgpu: &WgpuClump, texture_format: wgpu::TextureFormat) -> Self {
+    pub(crate) fn default(wgpu: &WgpuClump, texture_format: wgpu::TextureFormat) -> Self {
         let shader_descriptor = include_wgsl!("shaders/shader.wgsl");
         let shader = wgpu.device.create_shader_module(shader_descriptor);
         let pipeline = render::make_pipeline(
@@ -119,7 +119,7 @@ impl Shader {
             &[Vertex::desc()],
             &shader,
             texture_format,
-            Some("Defualt Shader From Error"),
+            Some("Default Shader From Error"),
         );
 
         Self {

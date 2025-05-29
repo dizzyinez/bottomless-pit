@@ -2,11 +2,11 @@
 //! for anything to be rendered
 //! ```rust,no_run
 //! // Simple code to draw a 100x100 red rectangle to the screen
-//! let defualt_material: Material<()> = MaterialBuilder::new().build();
+//! let default_material: Material<()> = MaterialBuilder::new().build();
 //!
 //! impl Game for Struct {
 //!     fn render<'pass, 'others>(&mut Self, mut renderer: RenderInformation<'pass, 'others>) where 'others: 'pass {
-//!         self.defualt_material.add_rectangle(Vec2{x: 0.0, y: 0.0}, Vec2{x: 100.0, y: 100.0}, Colour::RED, &renderer);
+//!         self.default_material.add_rectangle(Vec2{x: 0.0, y: 0.0}, Vec2{x: 100.0, y: 100.0}, Colour::RED, &renderer);
 //!         self.default_material.draw(&mut renderer);
 //!     }
 //! }
@@ -49,12 +49,12 @@ impl<T> Material<T> {
     fn from_builder(builder: MaterialBuilder<T>, engine: &mut Engine) -> Self {
         let pipeline_id = match builder.shader_change {
             Some(rs) => rs,
-            None => engine.defualt_pipe_id(),
+            None => engine.default_pipe_id(),
         };
 
         let texture_id = builder
             .texture_change
-            .unwrap_or(engine.defualt_material_bg_id());
+            .unwrap_or(engine.default_material_bg_id());
 
         let vertex_size = std::mem::size_of::<Vertex>() as u64;
         let index_size = std::mem::size_of::<u16>() as u64;
@@ -90,7 +90,7 @@ impl<T> Material<T> {
         self.push_rectangle(wgpu, verts);
     }
 
-    /// Queues a rectangle using WGSL cordinate space. (0, 0) is the center of the screen and (-1, 1) is the top left corner
+    /// Queues a rectangle using WGSL coordinate space. (0, 0) is the center of the screen and (-1, 1) is the top left corner
     pub fn add_screenspace_rectangle(
         &mut self,
         position: Vec2<f32>,
@@ -105,8 +105,8 @@ impl<T> Material<T> {
         self.push_rectangle(wgpu, verts);
     }
 
-    /// Queues a rectagnle with UV coordniates. The position and size of the UV cordniates are the same as the pixels in the
-    /// actaul image.
+    /// Queues a rectangle with UV coordniates. The position and size of the UV coordinates are the same as the pixels in the
+    /// actual image.
     pub fn add_rectangle_with_uv(
         &mut self,
         position: Vec2<f32>,
@@ -662,7 +662,7 @@ impl<T: ShaderType + WriteInto> Material<T> {
 /// A builder struct used to create Materials
 pub struct MaterialBuilder<T> {
     // using options to denote a change from the default
-    // in the case of a texture the defualt is just the White_Pixel
+    // in the case of a texture the default is just the White_Pixel
     texture_change: Option<ResourceId<Texture>>,
     shader_change: Option<ResourceId<Shader>>,
     _marker: PhantomData<T>,

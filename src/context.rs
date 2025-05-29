@@ -1,4 +1,4 @@
-use crate::engine_handle::{BuildError, DefualtResources, EngineBuilder};
+use crate::engine_handle::{BuildError, DefaultResources, EngineBuilder};
 use crate::layouts;
 use crate::render::make_pipeline;
 use crate::resource::ResourceManager;
@@ -31,7 +31,7 @@ impl GraphicsContext {
         event_loop: &ActiveEventLoop,
         mut window_options: WindowOptions,
         resource_manager: &mut ResourceManager,
-        resources: &DefualtResources,
+        resources: &DefaultResources,
     ) -> Self {
         // should never fail as we will always set it
 
@@ -117,7 +117,7 @@ impl GraphicsContext {
         adapter: Result<wgpu::Adapter, wgpu::RequestAdapterError>,
         pre_made: Intermediate,
         resource_manager: &mut ResourceManager,
-        resources: &DefualtResources,
+        resources: &DefaultResources,
     ) -> Self {
         let adapter = match adapter {
             Ok(a) => a,
@@ -313,12 +313,12 @@ impl GraphicsContext {
         let text_renderer = TextRenderer::new(&wgpu_clump);
 
         let line_shader = Shader::from_pipeline(line_pipeline);
-        let generic_shader = Shader::defualt(&wgpu_clump, texture_format);
+        let generic_shader = Shader::default(&wgpu_clump, texture_format);
 
         resource_manager.insert_pipeline(resources.line_pipeline_id, line_shader);
         resource_manager.insert_pipeline(resources.default_pipeline_id, generic_shader);
 
-        resource_manager.insert_texture(resources.defualt_texture_id, white_pixel);
+        resource_manager.insert_texture(resources.default_texture_id, white_pixel);
 
         Self {
             wgpu: wgpu_clump,
