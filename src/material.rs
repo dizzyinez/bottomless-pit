@@ -31,22 +31,22 @@ use crate::vertex::{self, LineVertex, Vertex};
 /// If you don't have any uniform data attached to the shader
 /// utilized by the material use the unit `()` type.
 #[derive(Debug)]
-pub struct Material<T = ()> {
+pub struct Material<VertexType = (), UniformDataType = ()> {
     pipeline_id: ResourceId<Shader>,
-    /// counts the bytes of vertex not the actual number
-    pub(crate) vertex_size: u64,
-    pub(crate) vertex_count: u64,
-    /// counts the bytes of the index not the actual number
     pub(crate) index_count: u64,
-    pub(crate) index_size: u64,
+    pub(crate) vertex_count: u64,
     inner: Option<InnerBuffer>,
     texture_id: ResourceId<Texture>,
-    _marker: PhantomData<T>,
+    _marker_vt: PhantomData<VertexType>,
+    _marker_udt: PhantomData<UniformDataType>,
 }
 
-impl<T> Material<T> {
+impl<VertexType> Material<VertexType> {
+    const VERTEX_SIZE: u64 = std::mem::size_of::<VertexType>() as u64;
+    const INDEX_SIZE: u64 = std::mem::size_of::<u16>() as u64;
+
     /// Takes a MaterialBuilder and turns it into a Material
-    fn from_builder(builder: MaterialBuilder<T>, engine: &mut Engine) -> Self {
+    fn from_builder(builder: MaterialBuilder<VertexType>, engine: &mut Engine) -> Self {
         let pipeline_id = match builder.shader_change {
             Some(rs) => rs,
             None => engine.default_pipe_id(),
@@ -56,18 +56,14 @@ impl<T> Material<T> {
             .texture_change
             .unwrap_or(engine.default_material_bg_id());
 
-        let vertex_size = std::mem::size_of::<Vertex>() as u64;
-        let index_size = std::mem::size_of::<u16>() as u64;
-
         Self {
             pipeline_id,
             vertex_count: 0,
-            vertex_size,
             index_count: 0,
-            index_size,
             inner: None,
             texture_id,
-            _marker: PhantomData,
+            _marker_vt: PhantomData,
+            _marker_udt: PhantomData,
         }
     }
 
@@ -291,9 +287,9 @@ impl<T> Material<T> {
         if self.inner.is_none() {
             let (vert, ind) = Self::create_buffers(
                 &render.wgpu.device,
-                self.vertex_size,
+                Self::VERTEX_SIZE,
                 50,
-                self.index_size,
+                Self::INDEX_SIZE,
                 50,
             );
 
@@ -345,11 +341,11 @@ impl<T> Material<T> {
         let buffers = self.inner.as_mut().unwrap();
 
         let max_verts = buffers.vertex_buffer.size();
-        if self.vertex_count + (vertices.len() as u64 * self.vertex_size) > max_verts {
+        if self.vertex_count + (vertices.len() as u64 * Self::VERTEX_SIZE > max_verts {
             grow_buffer(
                 &mut buffers.vertex_buffer,
                 wgpu,
-                self.vertex_count + (vertices.len() as u64 * self.vertex_size),
+                self.vertex_count + (vertices.len() as u64 * Self::VERTEX_SIZE),
                 wgpu::BufferUsages::VERTEX,
             );
         }
@@ -643,11 +639,15 @@ impl<T> Material<T> {
     }
 }
 
-impl<T: ShaderType + WriteInto> Material<T> {
+impl<VertexType, UniformDataType: ShaderType + WriteInto> Material<VertexType, UniformDataType> {
     /// Attempts to update the uniform data held within in the shader.
     /// This will fail in the event that the shader has not loaded yet or
     /// if the shader used to create the material never had any UniformData,
-    pub fn update_uniform_data(&self, data: &T, engine: &Engine) -> Result<(), UniformError> {
+    pub fn update_uniform_data(
+        &self,
+        data: &UniformDataType,
+        engine: &Engine,
+    ) -> Result<(), UniformError> {
         let options = match engine.resource_manager.get_pipeline(&self.pipeline_id) {
             Some(shader) => shader,
             None => return Err(UniformError::NotLoadedYet),
@@ -660,22 +660,24 @@ impl<T: ShaderType + WriteInto> Material<T> {
 }
 
 /// A builder struct used to create Materials
-pub struct MaterialBuilder<T> {
+pub struct MaterialBuilder<VertexType, UniformDataType> {
     // using options to denote a change from the default
     // in the case of a texture the default is just the White_Pixel
     texture_change: Option<ResourceId<Texture>>,
     shader_change: Option<ResourceId<Shader>>,
-    _marker: PhantomData<T>,
+    _marker_vt: PhantomData<VertexType>,
+    _marker_udt: PhantomData<UniformDataType>,
 }
 
-impl<T> MaterialBuilder<T> {
+impl<VertexType, UniformDataType> MaterialBuilder<VertexType, UniformDataType> {
     /// Creates a new MaterialBuilder, that contains no texture, custom shaders, or
     /// uniforms
     pub fn new() -> Self {
         Self {
             texture_change: None,
             shader_change: None,
-            _marker: PhantomData,
+            _marker_vt: PhantomData,
+            _marker_udt: PhantomData,
         }
     }
 
@@ -683,17 +685,15 @@ impl<T> MaterialBuilder<T> {
     pub fn add_texture(self, texture: ResourceId<Texture>) -> Self {
         Self {
             texture_change: Some(texture),
-            shader_change: self.shader_change,
-            _marker: PhantomData,
+            ..self
         }
     }
 
     /// Sets the shader for the Material
     pub fn set_shader(self, shader: ResourceId<Shader>) -> Self {
         Self {
-            texture_change: self.texture_change,
             shader_change: Some(shader),
-            _marker: PhantomData,
+            ..self
         }
     }
 
@@ -701,11 +701,9 @@ impl<T> MaterialBuilder<T> {
     pub fn add_uniform_data<H: ShaderType + WriteInto>(
         self,
         _data: &UniformData<H>,
-    ) -> MaterialBuilder<H> {
+    ) -> MaterialBuilder<VertexType, H> {
         MaterialBuilder {
-            texture_change: self.texture_change,
-            shader_change: self.shader_change,
-            _marker: PhantomData,
+            ..self
         }
     }
 
@@ -715,7 +713,7 @@ impl<T> MaterialBuilder<T> {
     }
 }
 
-impl<T> Default for MaterialBuilder<T> {
+impl<VertexType, UniformDataType> Default for MaterialBuilder<VertexType, UniformDataType> {
     fn default() -> Self {
         Self::new()
     }
@@ -855,7 +853,7 @@ impl LineMaterial {
 
         information
             .pass
-            .draw(0..self.get_vertex_count() as u32, 0..1);
+            .draw(0..self.get_vertex_count() as u64, 0..1);
 
         self.vertex_count = 0;
     }

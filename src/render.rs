@@ -66,8 +66,8 @@ pub(crate) fn make_pipeline(
         primitive: wgpu::PrimitiveState {
             topology,
             strip_index_format: None,
-            front_face: wgpu::FrontFace::Cw, // triagnle must be counter-clock wise to be considered facing forawrd
-            cull_mode: Some(wgpu::Face::Back), // all triagnles not front facing are culled
+            front_face: wgpu::FrontFace::Cw, // triangle must be clock-wise to be considered facing forawrd
+            cull_mode: Some(wgpu::Face::Back), // all triangles not front facing are culled
             // setting this to anything other than fill requires Features::NON_FILL_POLYGON_MODE
             polygon_mode: wgpu::PolygonMode::Fill,
             // requires Features::DEPTH_CLIP_CONTROLL,

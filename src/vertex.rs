@@ -8,9 +8,14 @@ pub struct Vertex {
     pub colour: [f32; 4],
 }
 
-impl Vertex {
-    pub fn desc<'a>() -> wgpu::VertexBufferLayout<'a> {
-        wgpu::VertexBufferLayout {
+//might want to make this non-const at some point to allow run-time attribute offsets, but this
+//works for now...
+pub trait Layout {
+    const DESC: wgpu::VertexBufferLayout<'static>;
+}
+
+impl Layout for Vertex {
+    const DESC: wgpu::VertexBufferLayout<'static> = wgpu::VertexBufferLayout {
             array_stride: std::mem::size_of::<Vertex>() as wgpu::BufferAddress,
             step_mode: wgpu::VertexStepMode::Vertex,
             attributes: &[
@@ -30,9 +35,10 @@ impl Vertex {
                     format: wgpu::VertexFormat::Float32x4,
                 },
             ],
-        }
-    }
+        };
+}
 
+impl Vertex {
     pub fn from_2d(position: [f32; 2], tex_coords: [f32; 2], colour: [f32; 4]) -> Self {
         Self {
             position,

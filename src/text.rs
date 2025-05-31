@@ -17,7 +17,7 @@
 //!     // construct any struct that implements Game
 //!     let game = UserStruct::new(text, text_buffer);
 //!
-//!     egnine.run(game);
+//!     engine.run(game);
 //! }
 //!
 //! impl Game for UserStruct {
