@@ -17,7 +17,7 @@
 //! ```
 
 use crate::colour::Colour;
-use crate::context::WgpuClump;
+use crate::graphics_context::WgpuClump;
 use crate::engine_handle::Engine;
 use crate::resource::{ResourceId, ResourceManager};
 use crate::shader::Shader;
@@ -215,7 +215,7 @@ impl<'a> RenderHandle<'a> {
 
 impl<'a> From<&'a mut Engine> for RenderHandle<'a> {
     fn from(value: &'a mut Engine) -> Self {
-        let context = value.context.as_ref().unwrap();
+        let context = value.graphics_context.as_ref().unwrap();
 
         let encoder = context
             .wgpu
@@ -270,7 +270,7 @@ where
     pub(crate) wgpu: &'o WgpuClump,
 }
 
-impl<'p, 'o> Renderer<'p, 'o> {
+impl<'o, 'p> Renderer<'o, 'p> {
     /// Resets the camera to the default camera.
     pub fn reset_camera(&mut self) {
         self.pass.set_bind_group(1, self.camera_bindgroup, &[]);

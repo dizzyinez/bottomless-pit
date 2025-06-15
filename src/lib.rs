@@ -43,7 +43,7 @@
 pub mod buffer;
 pub mod camera;
 pub mod colour;
-mod context;
+mod graphics_context;
 pub mod engine_handle;
 pub mod input;
 mod layouts;
@@ -52,6 +52,7 @@ pub mod matrix_math;
 pub mod render;
 pub mod resource;
 pub mod shader;
+pub mod sprite_batch;
 pub mod text;
 pub mod texture;
 pub mod vectors;

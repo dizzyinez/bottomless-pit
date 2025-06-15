@@ -48,6 +48,7 @@ use std::sync::atomic::AtomicU64;
 
 use winit::event_loop::EventLoopProxy;
 
+use crate::sprite_batch::SpriteBatch;
 use crate::engine_handle::BpEvent;
 use crate::shader::{IntermediateOptions, Shader};
 use crate::text::Font;
@@ -320,6 +321,7 @@ pub(crate) enum ResourceType {
     Shader(IntermediateOptions),
     Bytes,
     Font,
+    Material,
 }
 
 impl PartialEq for ResourceType {
@@ -400,24 +402,26 @@ impl<T> std::hash::Hash for ResourceId<T> {
 type ResourceMap<T> = HashMap<ResourceId<T>, T>;
 
 pub(crate) struct ResourceManager {
-    btye_resources: ResourceMap<Vec<u8>>,
+    byte_resources: ResourceMap<Vec<u8>>,
     bindgroup_resources: ResourceMap<Texture>,
     pipeline_resource: ResourceMap<Shader>,
     fonts: ResourceMap<Font>,
+    batch_renderer_resources: HashMap<ResourceId<Shader>, SpriteBatch>,
 }
 
 impl ResourceManager {
     pub fn new() -> Self {
         Self {
-            btye_resources: HashMap::new(),
+            byte_resources: HashMap::new(),
             bindgroup_resources: HashMap::new(),
             pipeline_resource: HashMap::new(),
             fonts: HashMap::new(),
+            batch_renderer_resources: HashMap::new(),
         }
     }
 
     pub fn insert_bytes(&mut self, key: ResourceId<Vec<u8>>, data: Vec<u8>) {
-        self.btye_resources.insert(key, data);
+        self.byte_resources.insert(key, data);
     }
 
     pub fn insert_texture(&mut self, key: ResourceId<Texture>, data: Texture) {
@@ -432,8 +436,12 @@ impl ResourceManager {
         self.fonts.insert(key, data);
     }
 
+    pub fn insert_sprite_batch(&mut self, key: ResourceId<Shader>, data: SpriteBatch) {
+        self.batch_renderer_resources.insert(key, data);
+    }
+
     pub fn get_byte_resource(&self, key: &ResourceId<Vec<u8>>) -> Option<&Vec<u8>> {
-        self.btye_resources.get(key)
+        self.byte_resources.get(key)
     }
 
     pub fn get_texture(&self, key: &ResourceId<Texture>) -> Option<&Texture> {
@@ -442,6 +450,10 @@ impl ResourceManager {
 
     pub fn get_pipeline(&self, key: &ResourceId<Shader>) -> Option<&Shader> {
         self.pipeline_resource.get(key)
+    }
+
+    pub fn get_sprite_batch(&self, key: &ResourceId<Shader>) -> Option<&SpriteBatch> {
+        self.batch_renderer_resources.get(key)
     }
 
     pub fn get_font(&self, key: &ResourceId<Font>) -> Option<&Font> {

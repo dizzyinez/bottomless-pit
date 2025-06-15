@@ -2,48 +2,46 @@ use crate::vectors::Vec2;
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
-pub struct Vertex {
+pub struct Vertex2D {
+    pub material_index: u32, //used for batch rendering with multiple materials
     pub position: [f32; 2],
     pub tex_coords: [f32; 2],
     pub colour: [f32; 4],
 }
 
-//might want to make this non-const at some point to allow run-time attribute offsets, but this
-//works for now...
 pub trait Layout {
-    const DESC: wgpu::VertexBufferLayout<'static>;
+    fn desc() -> wgpu::VertexBufferLayout<'static>;
 }
 
-impl Layout for Vertex {
-    const DESC: wgpu::VertexBufferLayout<'static> = wgpu::VertexBufferLayout {
-            array_stride: std::mem::size_of::<Vertex>() as wgpu::BufferAddress,
+pub trait Batchable {
+    fn set_material_index(&mut self, material_index: u32);
+}
+
+impl Layout for Vertex2D {
+    fn desc() -> wgpu::VertexBufferLayout<'static> {
+        const ATTRIBS: [wgpu::VertexAttribute; 4] =
+            wgpu::vertex_attr_array![0 => Uint32, 1 => Float32x2, 2 => Float32x2, 3 => Float32x4];
+        wgpu::VertexBufferLayout {
+            array_stride: std::mem::size_of::<Vertex2D>() as wgpu::BufferAddress,
             step_mode: wgpu::VertexStepMode::Vertex,
-            attributes: &[
-                wgpu::VertexAttribute {
-                    offset: 0,
-                    shader_location: 0,
-                    format: wgpu::VertexFormat::Float32x2,
-                },
-                wgpu::VertexAttribute {
-                    offset: std::mem::size_of::<[f32; 2]>() as wgpu::BufferAddress,
-                    shader_location: 1,
-                    format: wgpu::VertexFormat::Float32x2,
-                },
-                wgpu::VertexAttribute {
-                    offset: std::mem::size_of::<[f32; 4]>() as wgpu::BufferAddress,
-                    shader_location: 2,
-                    format: wgpu::VertexFormat::Float32x4,
-                },
-            ],
-        };
+            attributes: &ATTRIBS,
+        }
+    }
 }
 
-impl Vertex {
+impl Batchable for Vertex2D {
+    fn set_material_index(&mut self, material_index: u32) {
+        self.material_index = material_index;
+    }
+}
+
+impl Vertex2D {
     pub fn from_2d(position: [f32; 2], tex_coords: [f32; 2], colour: [f32; 4]) -> Self {
         Self {
             position,
             tex_coords,
             colour,
+            material_index: 0,
         }
     }
 
@@ -120,29 +118,29 @@ pub(crate) fn new(
     size: Vec2<f32>,
     colour: [f32; 4],
     screen_size: Vec2<u32>,
-) -> [Vertex; 4] {
+) -> [Vertex2D; 4] {
     let pos = pos.to_raw();
     let size = size.to_raw();
     [
-        Vertex::from_2d(pos, [0.0, 0.0], colour).screenspace_to_pixels(screen_size),
-        Vertex::from_2d([pos[0] + size[0], pos[1]], [1.0, 0.0], colour)
+        Vertex2D::from_2d(pos, [0.0, 0.0], colour).screenspace_to_pixels(screen_size),
+        Vertex2D::from_2d([pos[0] + size[0], pos[1]], [1.0, 0.0], colour)
             .screenspace_to_pixels(screen_size),
-        Vertex::from_2d([pos[0] + size[0], pos[1] - size[1]], [1.0, 1.0], colour)
+        Vertex2D::from_2d([pos[0] + size[0], pos[1] - size[1]], [1.0, 1.0], colour)
             .screenspace_to_pixels(screen_size),
-        Vertex::from_2d([pos[0], pos[1] - size[1]], [0.0, 1.0], colour)
+        Vertex2D::from_2d([pos[0], pos[1] - size[1]], [0.0, 1.0], colour)
             .screenspace_to_pixels(screen_size),
     ]
 }
 
-pub fn from_pixels(pos: Vec2<f32>, size: Vec2<f32>, colour: [f32; 4]) -> [Vertex; 4] {
+pub fn from_pixels(pos: Vec2<f32>, size: Vec2<f32>, colour: [f32; 4]) -> [Vertex2D; 4] {
     let pos = pos.to_raw();
     let size = size.to_raw();
 
     [
-        Vertex::from_2d(pos, [0.0, 0.0], colour),
-        Vertex::from_2d([pos[0] + size[0], pos[1]], [1.0, 0.0], colour),
-        Vertex::from_2d([pos[0] + size[0], pos[1] + size[1]], [1.0, 1.0], colour),
-        Vertex::from_2d([pos[0], pos[1] + size[1]], [0.0, 1.0], colour),
+        Vertex2D::from_2d(pos, [0.0, 0.0], colour),
+        Vertex2D::from_2d([pos[0] + size[0], pos[1]], [1.0, 0.0], colour),
+        Vertex2D::from_2d([pos[0] + size[0], pos[1] + size[1]], [1.0, 1.0], colour),
+        Vertex2D::from_2d([pos[0], pos[1] + size[1]], [0.0, 1.0], colour),
     ]
 }
 
@@ -152,24 +150,24 @@ pub fn from_pixels_with_uv(
     colour: [f32; 4],
     uv_pos: Vec2<f32>,
     uv_size: Vec2<f32>,
-) -> [Vertex; 4] {
+) -> [Vertex2D; 4] {
     let pos = pos.to_raw();
     let size = size.to_raw();
     let uv_pos = uv_pos.to_raw();
 
     [
-        Vertex::from_2d(pos, uv_pos, colour),
-        Vertex::from_2d(
+        Vertex2D::from_2d(pos, uv_pos, colour),
+        Vertex2D::from_2d(
             [pos[0] + size[0], pos[1]],
             [uv_pos[0] + uv_size.x, uv_pos[1]],
             colour,
         ),
-        Vertex::from_2d(
+        Vertex2D::from_2d(
             [pos[0] + size[0], pos[1] + size[1]],
             [uv_pos[0] + uv_size.x, uv_pos[1] + uv_size.y],
             colour,
         ),
-        Vertex::from_2d(
+        Vertex2D::from_2d(
             [pos[0], pos[1] + size[1]],
             [uv_pos[0], uv_pos[1] + uv_size.y],
             colour,
@@ -182,7 +180,7 @@ pub(crate) fn from_pixels_with_rotation(
     size: Vec2<f32>,
     colour: [f32; 4],
     rotation: f32,
-) -> [Vertex; 4] {
+) -> [Vertex2D; 4] {
     let pos = pos.to_raw();
     let size = size.to_raw();
 
@@ -192,11 +190,11 @@ pub(crate) fn from_pixels_with_rotation(
     };
 
     [
-        Vertex::from_2d(pos, [0.0, 0.0], colour).rotate(rotation, center),
-        Vertex::from_2d([pos[0] + size[0], pos[1]], [1.0, 0.0], colour).rotate(rotation, center),
-        Vertex::from_2d([pos[0] + size[0], pos[1] + size[1]], [1.0, 1.0], colour)
+        Vertex2D::from_2d(pos, [0.0, 0.0], colour).rotate(rotation, center),
+        Vertex2D::from_2d([pos[0] + size[0], pos[1]], [1.0, 0.0], colour).rotate(rotation, center),
+        Vertex2D::from_2d([pos[0] + size[0], pos[1] + size[1]], [1.0, 1.0], colour)
             .rotate(rotation, center),
-        Vertex::from_2d([pos[0], pos[1] + size[1]], [0.0, 1.0], colour).rotate(rotation, center),
+        Vertex2D::from_2d([pos[0], pos[1] + size[1]], [0.0, 1.0], colour).rotate(rotation, center),
     ]
 }
 
@@ -207,27 +205,27 @@ pub(crate) fn from_pixels_ex(
     rotation: f32,
     uv_pos: Vec2<f32>,
     uv_size: Vec2<f32>,
-) -> [Vertex; 4] {
+) -> [Vertex2D; 4] {
     let center = (pos + size) / 2.0;
     let pos = pos.to_raw();
     let size = size.to_raw();
     let uv_pos = uv_pos.to_raw();
 
     [
-        Vertex::from_2d(pos, uv_pos, colour).rotate(rotation, center),
-        Vertex::from_2d(
+        Vertex2D::from_2d(pos, uv_pos, colour).rotate(rotation, center),
+        Vertex2D::from_2d(
             [pos[0] + size[0], pos[1]],
             [uv_pos[0] + uv_size.x, uv_pos[1]],
             colour,
         )
         .rotate(rotation, center),
-        Vertex::from_2d(
+        Vertex2D::from_2d(
             [pos[0] + size[0], pos[1] + size[1]],
             [uv_pos[0] + uv_size.x, uv_pos[1] + uv_size.y],
             colour,
         )
         .rotate(rotation, center),
-        Vertex::from_2d(
+        Vertex2D::from_2d(
             [pos[0], pos[1] + size[1]],
             [uv_pos[0], uv_pos[1] + uv_size.y],
             colour,
@@ -244,27 +242,27 @@ pub(crate) fn new_ex(
     rotation: f32,
     uv_pos: Vec2<f32>,
     uv_size: Vec2<f32>,
-) -> [Vertex; 4] {
+) -> [Vertex2D; 4] {
     let center = (pos + size) / 2.0;
     let pos = pos.to_raw();
     let size = size.to_raw();
     let uv_pos = uv_pos.to_raw();
 
     [
-        Vertex::from_2d(pos, uv_pos, colour).rotate(rotation, center),
-        Vertex::from_2d(
+        Vertex2D::from_2d(pos, uv_pos, colour).rotate(rotation, center),
+        Vertex2D::from_2d(
             [pos[0] + size[0], pos[1]],
             [uv_pos[0] + uv_size.x, uv_pos[1]],
             colour,
         )
         .rotate(rotation, center),
-        Vertex::from_2d(
+        Vertex2D::from_2d(
             [pos[0] + size[0], pos[1] + size[1]],
             [uv_pos[0] + uv_size.x, uv_pos[1] + uv_size.y],
             colour,
         )
         .rotate(rotation, center),
-        Vertex::from_2d(
+        Vertex2D::from_2d(
             [pos[0], pos[1] + size[1]],
             [uv_pos[0], uv_pos[1] + uv_size.y],
             colour,
@@ -278,21 +276,21 @@ pub(crate) fn from_pixels_custom(
     uvs: [Vec2<f32>; 4],
     rotation: f32,
     colour: [f32; 4],
-) -> [Vertex; 4] {
+) -> [Vertex2D; 4] {
     let center = get_center_of_four_points(points);
 
     [
-        Vertex::from_2d(points[0].to_raw(), uvs[0].to_raw(), colour).rotate(rotation, center),
-        Vertex::from_2d(points[1].to_raw(), uvs[1].to_raw(), colour).rotate(rotation, center),
-        Vertex::from_2d(points[2].to_raw(), uvs[2].to_raw(), colour).rotate(rotation, center),
-        Vertex::from_2d(points[3].to_raw(), uvs[3].to_raw(), colour).rotate(rotation, center),
+        Vertex2D::from_2d(points[0].to_raw(), uvs[0].to_raw(), colour).rotate(rotation, center),
+        Vertex2D::from_2d(points[1].to_raw(), uvs[1].to_raw(), colour).rotate(rotation, center),
+        Vertex2D::from_2d(points[2].to_raw(), uvs[2].to_raw(), colour).rotate(rotation, center),
+        Vertex2D::from_2d(points[3].to_raw(), uvs[3].to_raw(), colour).rotate(rotation, center),
     ]
 }
 
 fn get_center_of_four_points(points: [Vec2<f32>; 4]) -> Vec2<f32> {
     let tri1_centroid = (points[0] + points[1] + points[3]) / 3.0;
 
-    let tri2_centroid = (points[1] + points[2] + points[3]) / 3.0; 
+    let tri2_centroid = (points[1] + points[2] + points[3]) / 3.0;
 
     (tri1_centroid + tri2_centroid) / 2.0
 }

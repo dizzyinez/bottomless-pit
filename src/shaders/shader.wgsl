@@ -37,11 +37,11 @@ fn vs_main(model: VertexInput) -> VertexOutput {
 // Fragment shader
 
 @group(0) @binding(0)
-var t_diffuse: texture_2d<f32>;
+var texture_array: binding_array<texture_2d<f32>>;
 @group(0) @binding(1)
-var s_diffuse: sampler;
+var sampler_array: binding_array<sampler>;
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    return textureSample(t_diffuse, s_diffuse, in.tex_coords) * in.colour;
+    return textureSample(texture_array[0], sampler_array[0], in.tex_coords) * in.colour;
 }

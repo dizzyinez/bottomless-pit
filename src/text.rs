@@ -42,16 +42,16 @@ use glyphon::{
     self, Attrs, Family, FontSystem, Metrics, Shaping, SwashCache, TextArea, TextAtlas, TextBounds,
 };
 
+use crate::sprite_batch::{self, SpriteBatch};
 use crate::colour::Colour;
-use crate::context::WgpuClump;
+use crate::graphics_context::WgpuClump;
 use crate::engine_handle::Engine;
-use crate::material::{self, Material};
 use crate::render::Renderer;
 use crate::resource::{
     self, InProgressResource, LoadingOp, ResourceId, ResourceManager, ResourceType,
 };
 use crate::vectors::Vec2;
-use crate::vertex::{self, Vertex};
+use crate::vertex::{self, Vertex2D};
 use crate::{layouts, vec2};
 
 /// Stores Important information nessicary to rendering text. Only on of these should
@@ -155,7 +155,7 @@ impl TextMaterial {
         self.text = text.into();
 
         // again only fails if called outstide Game Trait and why would you set text
-        let context = match &mut engine.context {
+        let context = match &mut engine.graphics_context {
             None => return,
             Some(c) => c,
         };
@@ -202,7 +202,7 @@ impl TextMaterial {
         self.text = text.into();
 
         // again only fails if called outstide Game Trait and why would you set text
-        let context = match &mut engine.context {
+        let context = match &mut engine.graphics_context {
             None => return,
             Some(c) => c,
         };
@@ -254,7 +254,7 @@ impl TextMaterial {
     pub fn set_font_size(&mut self, new_size: f32, engine: &mut Engine) {
         self.font_size = new_size;
         // again only fails if called outstide Game Trait and why would you set text
-        let context = match &mut engine.context {
+        let context = match &mut engine.graphics_context {
             None => return,
             Some(c) => c,
         };
@@ -283,11 +283,11 @@ impl TextMaterial {
         self.update_measurements(font_info);
     }
 
-    /// Sets the line hieght of the text
+    /// Sets the line height of the text
     pub fn set_line_height(&mut self, new_height: f32, engine: &mut Engine) {
         self.line_height = new_height;
         // again only fails if called outstide Game Trait and why would you set text
-        let context = match &mut engine.context {
+        let context = match &mut engine.graphics_context {
             None => return,
             Some(c) => c,
         };
@@ -489,16 +489,16 @@ impl TextMaterial {
         self.push_rectangle(wgpu, verts);
     }
 
-    fn push_rectangle(&mut self, wgpu: &WgpuClump, verts: [Vertex; 4]) {
+    fn push_rectangle(&mut self, wgpu: &WgpuClump, verts: [Vertex2D; 4]) {
         let num_verts = self.get_vertex_number() as u16;
         let inner = self.inner.as_mut().unwrap();
 
-        let vertex_size = std::mem::size_of::<Vertex>() as u64;
+        let vertex_size = std::mem::size_of::<Vertex2D>() as u64;
         let index_size = 2;
 
         let max_verts = inner.vertex_buffer.size();
         if self.vertex_count + (4 * vertex_size) > max_verts {
-            material::grow_buffer(
+            sprite_batch::grow_buffer(
                 &mut inner.vertex_buffer,
                 wgpu,
                 1,
@@ -517,7 +517,7 @@ impl TextMaterial {
 
         let max_indicies = inner.index_buffer.size();
         if self.index_count + (6 * index_size) > max_indicies {
-            material::grow_buffer(&mut inner.index_buffer, wgpu, 1, wgpu::BufferUsages::INDEX);
+            sprite_batch::grow_buffer(&mut inner.index_buffer, wgpu, 1, wgpu::BufferUsages::INDEX);
         }
 
         wgpu.queue.write_buffer(
@@ -536,7 +536,7 @@ impl TextMaterial {
     }
 
     fn get_vertex_number(&self) -> u64 {
-        self.vertex_count / std::mem::size_of::<Vertex>() as u64
+        self.vertex_count / std::mem::size_of::<Vertex2D>() as u64
     }
 
     fn get_index_number(&self) -> u64 {
@@ -571,7 +571,7 @@ impl TextMaterial {
     /// texture used to render the text. If this is not run after each change then it wont
     /// display the changes.
     pub fn prepare(&mut self, engine: &mut Engine) {
-        let context = match &mut engine.context {
+        let context = match &mut engine.graphics_context {
             Some(c) => c,
             None => return, // this will only happen if you prepare before IMPL GAME so why,,,,
         };
@@ -760,10 +760,11 @@ impl InnerMaterial {
             font_info.wgpu,
         );
 
-        let vertex_size = std::mem::size_of::<Vertex>() as u64;
+        let vertex_size = std::mem::size_of::<Vertex2D>() as u64;
 
         let (vertex_buffer, index_buffer) =
-            Material::<()>::create_buffers(&wgpu.device, vertex_size, 16, 2, 32);
+            SpriteBatch::<Vertex2D, ()>::create_buffers(&wgpu.device, 16, 32);
+            //BatchRenderer::<Vertex2D, ()>::create_buffers(&wgpu.device, vertex_size, 16, 2, 32);
 
         let bind_group = wgpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Text Widget BindGroup"),

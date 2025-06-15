@@ -9,25 +9,27 @@ use std::string::FromUtf8Error;
 
 use encase::private::WriteInto;
 use encase::ShaderType;
+use pollster::FutureExt;
 use wgpu::util::DeviceExt;
 use wgpu::{include_wgsl, TextureFormat};
 
-use crate::context::{GraphicsContext, WgpuClump};
+use crate::graphics_context::{GraphicsContext, WgpuClump};
 use crate::engine_handle::Engine;
 use crate::render::Renderer;
 use crate::resource::{self, InProgressResource, LoadingOp, ResourceId, ResourceType};
 use crate::texture::{SamplerType, UniformTexture};
 use crate::vectors::Vec2;
-use crate::vertex::Vertex;
+use crate::vertex::{Vertex2D, Layout};
 use crate::{layouts, render};
 
 /// An internal representation of an WGSL Shader. Under the hood this creates
 /// a new pipeline with or without the support for any extra uniforms. To be utilze
 /// the shader it must be added to a material
 #[derive(Debug)]
-pub struct Shader {
+pub struct Shader<VertexType: Layout = Vertex2D> {
     pub(crate) pipeline: wgpu::RenderPipeline,
     options: FinalShaderOptions,
+    _marker_vt: PhantomData<VertexType>,
 }
 
 impl Shader {
@@ -55,7 +57,7 @@ impl Shader {
         options: FinalShaderOptions,
         engine: &Engine,
     ) -> Result<Self, FromUtf8Error> {
-        let context = engine.context.as_ref().unwrap();
+        let context = engine.graphics_context.as_ref().unwrap();
 
         let string = String::from_utf8(data.to_vec())?;
         let shader = context
@@ -76,7 +78,7 @@ impl Shader {
                     &layouts::create_camera_layout(&context.wgpu.device),
                     &layout,
                 ],
-                &[Vertex::DESC],
+                &[VertexType::desc()],
                 &shader,
                 context.get_texture_format(),
                 Some("User Shader Pipeline"),
@@ -89,20 +91,25 @@ impl Shader {
                     &layouts::create_texture_layout(&context.wgpu.device),
                     &layouts::create_camera_layout(&context.wgpu.device),
                 ],
-                &[Vertex::DESC],
+                &[Vertex2D::desc()],
                 &shader,
                 context.get_texture_format(),
                 Some("User Shader Pipeline"),
             )
         };
 
-        Ok(Self { pipeline, options })
+        Ok(Self {
+            pipeline,
+            options,
+            _marker_vt: PhantomData,
+        })
     }
 
     pub(crate) fn from_pipeline(pipeline: wgpu::RenderPipeline) -> Self {
         Self {
             pipeline,
             options: FinalShaderOptions::EMPTY,
+            _marker_vt: PhantomData,
         }
     }
 
@@ -116,7 +123,7 @@ impl Shader {
                 &layouts::create_texture_layout(&wgpu.device),
                 &layouts::create_camera_layout(&wgpu.device),
             ],
-            &[Vertex::desc()],
+            &[Vertex2D::desc()],
             &shader,
             texture_format,
             Some("Default Shader From Error"),
@@ -125,6 +132,7 @@ impl Shader {
         Self {
             pipeline,
             options: FinalShaderOptions::EMPTY,
+            _marker_vt: PhantomData,
         }
     }
 
@@ -176,23 +184,23 @@ impl<T: ShaderType + WriteInto> UniformData<T> {
     }
 }
 
-/// `ShaderOptions` controlls the layout of your shader and wether or not you want
+/// `ShaderOptions` controls the layout of your shader and whether or not you want
 /// extra uniforms like a texture or a uniform buffer
 #[derive(Debug)]
-pub struct ShaderOptions<T> {
+pub struct ShaderOptions<UniformDataType> {
     uniform_data: Option<Vec<u8>>,
     uniform_texture: Option<(SamplerType, SamplerType, Vec2<u32>)>,
-    _marker: PhantomData<T>,
+    _marker_udt: PhantomData<UniformDataType>,
 }
 
 // switch texture with booleans and only store a layout
 // figure out how to make view later?
 
-impl<T> ShaderOptions<T> {
+impl<UniformDataType> ShaderOptions<UniformDataType> {
     pub const EMPTY: Self = Self {
         uniform_data: None,
         uniform_texture: None,
-        _marker: PhantomData,
+        _marker_udt: PhantomData,
     };
 
     /// This will create a shader with a layout of:
@@ -205,7 +213,7 @@ impl<T> ShaderOptions<T> {
     /// @group(2) @binding(0)
     /// var<uniform> mouse: MousePos;
     /// ```
-    pub fn with_uniform_data(data: &UniformData<T>) -> Self {
+    pub fn with_uniform_data(data: &UniformData<UniformDataType>) -> Self {
         // dont like doing this bc clone expensive but we need
         // to make this before wgpu initlizes
         let starting_buffer = data.initial_data.clone();
@@ -213,7 +221,7 @@ impl<T> ShaderOptions<T> {
         Self {
             uniform_data: Some(starting_buffer),
             uniform_texture: None,
-            _marker: PhantomData,
+            _marker_udt: PhantomData,
         }
     }
 
@@ -231,7 +239,7 @@ impl<T> ShaderOptions<T> {
         Self {
             uniform_data: None,
             uniform_texture: Some((mag, min, size)),
-            _marker: PhantomData,
+            _marker_udt: PhantomData,
         }
     }
 
@@ -244,7 +252,7 @@ impl<T> ShaderOptions<T> {
     /// @group(2) @binding(2)
     /// var light_map_sampler: sampler;
     /// ```
-    pub fn with_all(data: &UniformData<T>, texture: &UniformTexture) -> Self {
+    pub fn with_all(data: &UniformData<UniformDataType>, texture: &UniformTexture) -> Self {
         let starting_buffer = data.initial_data.clone();
         let (mag, min) = texture.get_sampler_info();
         let size = texture.get_size();
@@ -252,7 +260,7 @@ impl<T> ShaderOptions<T> {
         Self {
             uniform_data: Some(starting_buffer),
             uniform_texture: Some((mag, min, size)),
-            _marker: PhantomData,
+            _marker_udt: PhantomData,
         }
     }
 }
@@ -382,7 +390,7 @@ impl FinalShaderOptions {
         match &self.uniform_data {
             Some(buffer) => {
                 let wgpu = &engine
-                    .context
+                    .graphics_context
                     .as_ref()
                     .expect("NEED CONTEXT BEFORE UPDATING UNIFORM DATA")
                     .wgpu;

@@ -1,7 +1,7 @@
 //! Cointains the interface into the texture cache and by
 //! extension accsss the texture interface
 
-use crate::context::WgpuClump;
+use crate::graphics_context::WgpuClump;
 use crate::engine_handle::Engine;
 use crate::resource::{self, InProgressResource, LoadingOp, ResourceId, ResourceType};
 use crate::vectors::Vec2;
@@ -139,7 +139,7 @@ impl Texture {
         mag_filter: SamplerType,
         min_filter: SamplerType,
     ) -> Self {
-        let wgpu = &engine.context.as_ref().expect("need graphic context").wgpu;
+        let wgpu = &engine.graphics_context.as_ref().expect("need graphic context").wgpu;
         let diffuse_rgba = img.to_rgba8();
         let (width, height) = img.dimensions();
 
@@ -260,7 +260,7 @@ impl UniformTexture {
     /// this can be reszied at anytime with
     /// [Material::resize_uniform_texture](crate::material::Material::resize_uniform_texture)
     pub fn new(engine: &Engine, size: Vec2<u32>) -> Self {
-        let inner_texture = engine.context.as_ref().map(|c| {
+        let inner_texture = engine.graphics_context.as_ref().map(|c| {
             InnerTexture::from_wgpu(
                 size,
                 SamplerType::LinearInterpolation,
@@ -288,7 +288,7 @@ impl UniformTexture {
         mag_sampler: SamplerType,
         min_sampler: SamplerType,
     ) -> Self {
-        let inner_texture = engine.context.as_ref().map(|c| {
+        let inner_texture = engine.graphics_context.as_ref().map(|c| {
             InnerTexture::from_wgpu(
                 size,
                 mag_sampler,

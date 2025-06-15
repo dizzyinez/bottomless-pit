@@ -1,5 +1,7 @@
 //! just a file to hold functions for creating the various bindgroup layouts
 
+use std::num::{NonZeroU16, NonZeroU32};
+
 pub(crate) fn create_uniform_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
     device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
         label: Some("User_Shader_Options_Layout"),
@@ -28,6 +30,30 @@ pub(crate) fn create_texture_layout(device: &wgpu::Device) -> wgpu::BindGroupLay
                     sample_type: wgpu::TextureSampleType::Float { filterable: true },
                 },
                 count: None,
+            },
+            wgpu::BindGroupLayoutEntry {
+                binding: 1,
+                visibility: wgpu::ShaderStages::FRAGMENT,
+                ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                count: None,
+            },
+        ],
+        label: Some("texture_bind_group_layout"),
+    })
+}
+
+pub(crate) fn create_texture_array_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
+    device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        entries: &[
+            wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStages::FRAGMENT,
+                ty: wgpu::BindingType::Texture {
+                    multisampled: false,
+                    view_dimension: wgpu::TextureViewDimension::D2Array,
+                    sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                },
+                count: NonZeroU32::new(device.limits().max_binding_array_elements_per_shader_stage)
             },
             wgpu::BindGroupLayoutEntry {
                 binding: 1,

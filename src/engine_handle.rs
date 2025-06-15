@@ -20,7 +20,7 @@ use winit::window::BadIcon;
 #[cfg(target_arch = "wasm32")]
 use winit::platform::web::EventLoopExtWebSys;
 
-use crate::context::{GraphicsContext, Intermediate, WindowOptions};
+use crate::graphics_context::{GraphicsContext, Intermediate, WindowOptions};
 use crate::input::{InputHandle, Key, ModifierKeys, MouseKey};
 use crate::render::render;
 use crate::resource;
@@ -52,7 +52,8 @@ pub struct Engine {
     pub(crate) loader: Loader,
     pub(crate) default_resources: DefaultResources,
     ma_frame_time: f32,
-    pub(crate) context: Option<GraphicsContext>,
+    //pub(crate) gfx_context: Option<GraphicsContext>,
+    pub(crate) graphics_context: Option<GraphicsContext>,
 }
 
 impl Engine {
@@ -101,7 +102,7 @@ impl Engine {
             current_frametime: Instant::now(),
             spin_sleeper: SpinSleeper::default(),
             size,
-            context: None,
+            graphics_context: None,
             resource_manager,
             loader: Loader::new(),
             default_resources,
@@ -176,7 +177,7 @@ impl Engine {
     /// When called outside of the functions in the [Game] trait
     pub fn window_has_focus(&self) -> bool {
         let context = self
-            .context
+            .graphics_context
             .as_ref()
             .expect("Context hasnt been created yet run inside impl Game");
         context.window.has_focus()
@@ -187,7 +188,7 @@ impl Engine {
     /// When called outside of the functions in the [Game] trait
     pub fn is_window_maximized(&self) -> bool {
         let context = self
-            .context
+            .graphics_context
             .as_ref()
             .expect("Context hasnt been created yet run inside impl Game");
         context.window.is_maximized()
@@ -198,7 +199,7 @@ impl Engine {
     /// When called outside of the functions in the [Game] trait
     pub fn is_window_minimized(&self) -> bool {
         let context = self
-            .context
+            .graphics_context
             .as_ref()
             .expect("Context hasnt been created yet run inside impl Game");
         context.window.is_minimized().unwrap_or(false)
@@ -210,7 +211,7 @@ impl Engine {
     pub fn is_window_fullscreen(&self) -> bool {
         // based on limited docs knowledge this should work
         let context = self
-            .context
+            .graphics_context
             .as_ref()
             .expect("Context hasnt been created yet run inside impl Game");
         context.window.fullscreen().is_some()
@@ -221,7 +222,7 @@ impl Engine {
     /// When called outside of the functions in the [Game] trait
     pub fn maximize_window(&self) {
         let context = self
-            .context
+            .graphics_context
             .as_ref()
             .expect("Context hasnt been created yet run inside impl Game");
         context.window.set_maximized(true);
@@ -232,7 +233,7 @@ impl Engine {
     /// When called outside of the functions in the [Game] trait
     pub fn minimize_window(&self) {
         let context = self
-            .context
+            .graphics_context
             .as_ref()
             .expect("Context hasnt been created yet run inside impl Game");
         context.window.set_minimized(true);
@@ -254,7 +255,7 @@ impl Engine {
         let icon = winit::window::Icon::from_rgba(image_bytes, width, height)?;
 
         let context = self
-            .context
+            .graphics_context
             .as_ref()
             .expect("Context hasnt been created yet run inside impl Game");
 
@@ -267,7 +268,7 @@ impl Engine {
     /// When called outside of the functions in the [Game] trait
     pub fn set_window_title(&self, title: &str) {
         let context = self
-            .context
+            .graphics_context
             .as_ref()
             .expect("Context hasnt been created yet run inside impl Game");
         context.window.set_title(title);
@@ -278,7 +279,7 @@ impl Engine {
     /// When called outside of the functions in the [Game] trait
     pub fn set_window_position(&self, x: f32, y: f32) {
         let context = self
-            .context
+            .graphics_context
             .as_ref()
             .expect("Context hasnt been created yet run inside impl Game");
         context
@@ -291,7 +292,7 @@ impl Engine {
     /// When called outside of the functions in the [Game] trait
     pub fn set_window_min_size(&self, width: f32, height: f32) {
         let context = self
-            .context
+            .graphics_context
             .as_ref()
             .expect("Context hasnt been created yet run inside impl Game");
         context
@@ -301,7 +302,7 @@ impl Engine {
 
     pub fn set_window_size(&self, width: f32, height: f32) {
         let context = self
-            .context
+            .graphics_context
             .as_ref()
             .expect("Context hasnt been created yet run inside impl Game");
         let _ = context.window.request_inner_size(winit::dpi::PhysicalSize::new(width, height));
@@ -312,7 +313,7 @@ impl Engine {
     /// When called outside of the functions in the [Game] trait
     pub fn get_window_position(&self) -> Option<Vec2<i32>> {
         let context = self
-            .context
+            .graphics_context
             .as_ref()
             .expect("Context hasnt been created yet run inside impl Game");
         match context.window.outer_position() {
@@ -331,7 +332,7 @@ impl Engine {
     /// When called outside of the functions in the [Game] trait
     pub fn get_window_scale_factor(&self) -> f64 {
         let context = self
-            .context
+            .graphics_context
             .as_ref()
             .expect("Context hasnt been created yet run inside impl Game");
         context.window.scale_factor()
@@ -344,7 +345,7 @@ impl Engine {
     /// When called outside of the functions in the [Game] trait
     pub fn toggle_fullscreen(&self) {
         let context = self
-            .context
+            .graphics_context
             .as_ref()
             .expect("Context hasnt been created yet run inside impl Game");
         if self.is_window_fullscreen() {
@@ -361,7 +362,7 @@ impl Engine {
     /// When called outside of the functions in the [Game] trait
     pub fn hide_cursor(&mut self) {
         let context = self
-            .context
+            .graphics_context
             .as_ref()
             .expect("Context hasnt been created yet run inside impl Game");
         context.window.set_cursor_visible(false);
@@ -373,7 +374,7 @@ impl Engine {
     /// When called outside of the functions in the [Game] trait
     pub fn show_cursor(&mut self) {
         let context = self
-            .context
+            .graphics_context
             .as_ref()
             .expect("Context hasnt been created yet run inside impl Game");
         context.window.set_cursor_visible(true);
@@ -409,7 +410,7 @@ impl Engine {
     /// When called outside of the functions in the [Game] trait
     pub fn remove_vsync(&mut self) {
         let context = self
-            .context
+            .graphics_context
             .as_mut()
             .expect("Context hasnt been created yet run inside impl Game");
         context.config.present_mode = wgpu::PresentMode::AutoNoVsync;
@@ -425,7 +426,7 @@ impl Engine {
     /// When called outside of the functions in the [Game] trait
     pub fn add_vsync(&mut self) {
         let context = self
-            .context
+            .graphics_context
             .as_mut()
             .expect("Context hasnt been created yet run inside impl Game");
         context.config.present_mode = wgpu::PresentMode::AutoVsync;
@@ -451,7 +452,7 @@ impl Engine {
         let scale_factor = self.get_window_scale_factor();
 
         let context = self
-            .context
+            .graphics_context
             .as_mut()
             .expect("Context hasnt been created yet run inside impl Game");
 
@@ -594,7 +595,7 @@ impl Engine {
 
     fn resize(&mut self, new_size: Vec2<u32>) {
         let context = self
-            .context
+            .graphics_context
             .as_mut()
             .expect("Context hasnt been created yet run inside impl Game");
 
@@ -682,7 +683,7 @@ impl Engine {
         path: &Path,
     ) {
         let final_option =
-            FinalShaderOptions::from_intermediate(options, self.context.as_ref().unwrap());
+            FinalShaderOptions::from_intermediate(options, self.graphics_context.as_ref().unwrap());
 
         let typed_id: ResourceId<Shader> = ResourceId::from_number(id);
         let shader = Shader::from_resource_data(&data, final_option, self);
@@ -701,7 +702,7 @@ impl Engine {
     fn add_finished_font(&mut self, resource: Resource) {
         let typed_id: ResourceId<Font> = ResourceId::from_number(resource.id);
 
-        let context = self.context.as_mut().unwrap();
+        let context = self.graphics_context.as_mut().unwrap();
 
         let font = context.text_renderer.load_font_from_bytes(&resource.data);
         self.resource_manager.insert_font(typed_id, font);
@@ -721,7 +722,7 @@ impl Engine {
 
     fn add_default_shader(&mut self, id: NonZeroU64) {
         let context = self
-            .context
+            .graphics_context
             .as_ref()
             .expect("Context hasnt been created yet run inside impl Game");
 
@@ -732,7 +733,7 @@ impl Engine {
 
     fn add_default_font(&mut self, id: NonZeroU64) {
         let context = self
-            .context
+            .graphics_context
             .as_ref()
             .expect("Context hasnt been created yet run inside impl Game");
 
@@ -760,8 +761,8 @@ impl<T: Game> ApplicationHandler<BpEvent> for (T, Engine) {
         let (_, engine) = self;
 
         // WASM branch
-        if engine.context.is_none() {
-            engine.context = Some(GraphicsContext::from_active_loop(
+        if engine.graphics_context.is_none() {
+            engine.graphics_context = Some(GraphicsContext::from_active_loop(
                 event_loop,
                 engine.window_options.take().unwrap(),
                 &mut engine.resource_manager,
@@ -783,7 +784,7 @@ impl<T: Game> ApplicationHandler<BpEvent> for (T, Engine) {
     ) {
         let (game, engine) = self;
         log::info!("event: {:?}, {:?}", event, window_id);
-        if window_id == engine.context.as_ref().unwrap().window.id() && !engine.input(&event) {
+        if window_id == engine.graphics_context.as_ref().unwrap().window.id() && !engine.input(&event) {
             match event {
                 WindowEvent::CloseRequested => event_loop.exit(),
                 WindowEvent::Resized(physical_size) => {
@@ -826,7 +827,7 @@ impl<T: Game> ApplicationHandler<BpEvent> for (T, Engine) {
 
     fn about_to_wait(&mut self, _event_loop: &ActiveEventLoop) {
         let (_, engine) = self;
-        engine.context.as_ref().unwrap().window.request_redraw();
+        engine.graphics_context.as_ref().unwrap().window.request_redraw();
     }
 }
 
