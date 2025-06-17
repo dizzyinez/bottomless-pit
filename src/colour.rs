@@ -143,3 +143,47 @@ impl From<Colour> for [f32; 4] {
         [value.r, value.g, value.b, value.a]
     }
 }
+
+impl From<[f32; 4]> for Colour {
+    fn from(value: [f32; 4]) -> Self {
+        Colour {
+            r: value[0],
+            g: value[1],
+            b: value[2],
+            a: value[3],
+        }
+    }
+}
+
+impl From<(f32, f32, f32, f32)> for Colour {
+    fn from(value: (f32, f32, f32, f32)) -> Self {
+        Colour {
+            r: value.0,
+            g: value.1,
+            b: value.2,
+            a: value.3,
+        }
+    }
+}
+
+impl From<[f32; 3]> for Colour {
+    fn from(value: [f32; 3]) -> Self {
+        Colour {
+            r: value[0],
+            g: value[1],
+            b: value[2],
+            a: 1.0,
+        }
+    }
+}
+
+impl From<(f32, f32, f32)> for Colour {
+    fn from(value: (f32, f32, f32)) -> Self {
+        Colour {
+            r: value.0,
+            g: value.1,
+            b: value.2,
+            a: 1.0,
+        }
+    }
+}
