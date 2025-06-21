@@ -26,10 +26,10 @@ use crate::{layouts, render};
 /// a new pipeline with or without the support for any extra uniforms. To be utilze
 /// the shader it must be added to a material
 #[derive(Debug)]
-pub struct Shader<VertexType: Layout = Vertex2D> {
+pub struct Shader {
     pub(crate) pipeline: wgpu::RenderPipeline,
     options: FinalShaderOptions,
-    _marker_vt: PhantomData<VertexType>,
+    //_marker_vt: PhantomData<VertexType>,
 }
 
 impl Shader {
@@ -78,7 +78,7 @@ impl Shader {
                     &layouts::create_camera_layout(&context.wgpu.device),
                     &layout,
                 ],
-                &[VertexType::desc()],
+                &[Vertex2D::desc()],
                 &shader,
                 context.get_texture_format(),
                 Some("User Shader Pipeline"),
@@ -101,7 +101,7 @@ impl Shader {
         Ok(Self {
             pipeline,
             options,
-            _marker_vt: PhantomData,
+            //_marker_vt: PhantomData,
         })
     }
 
@@ -109,7 +109,7 @@ impl Shader {
         Self {
             pipeline,
             options: FinalShaderOptions::EMPTY,
-            _marker_vt: PhantomData,
+            //_marker_vt: PhantomData,
         }
     }
 
@@ -132,7 +132,7 @@ impl Shader {
         Self {
             pipeline,
             options: FinalShaderOptions::EMPTY,
-            _marker_vt: PhantomData,
+            //_marker_vt: PhantomData,
         }
     }
 

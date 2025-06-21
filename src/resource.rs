@@ -28,7 +28,7 @@
 //! impl Game for YourGame {
 //!     fn update(&mut self, engine: &mut Engine) {
 //!         if engine.is_key_pressed(Key::A) {
-//!             let texutre = Texture::new(engine, "path2.png", LoadingOp::Blocking);
+//!             let texture = Texture::new(engine, "path2.png", LoadingOp::Blocking);
 //!             // render and update wont be called until after the texture finishes loading
 //!         }
 //!     }
@@ -321,7 +321,6 @@ pub(crate) enum ResourceType {
     Shader(IntermediateOptions),
     Bytes,
     Font,
-    Material,
 }
 
 impl PartialEq for ResourceType {

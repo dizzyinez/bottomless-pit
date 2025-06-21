@@ -32,6 +32,7 @@ use crate::shader::{FinalShaderOptions, IntermediateOptions, Shader};
 use crate::text::Font;
 use crate::texture::{SamplerType, Texture};
 use crate::vectors::Vec2;
+use crate::vertex::Vertex2D;
 use crate::Game;
 
 /// The thing that makes the computer go
